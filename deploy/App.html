@@ -3,113 +3,26 @@
 <head>
     <title>Revision History Examples</title>
 
-    <script type="text/javascript" src="/apps/2.0p5/sdk.js"></script>
+    <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
 
     <script type="text/javascript">
-        Rally.onReady(function() {
-            Ext.define('CustomApp', {
-                extend: 'Rally.app.App',
-                componentCls: 'app',
-                layout: { type: 'hbox' },
-                defaults: { padding: 10 },
-                items: [
-                    {xtype: 'container',itemId:'render_example', flex: 1},
-                    {xtype: 'container',itemId:'line_by_line_example', flex: 1}
-                ],
-                launch: function() {
-                    this._getSomeStories();
-                },
-                _getSomeStories: function() {
-                    if ( this.render_grid ) { this.render_grid.destroy(); }
-                    if ( this.line_grid ) { this.line_grid.destroy(); }
-                    Ext.create('Rally.data.WsapiDataStore',{
-                        autoLoad: true,
-                        model: 'User Story',
-                        fetch: ['RevisionHistory','Revisions','FormattedID','Name','RevisionNumber','CreationDate','User'],
-                        listeners: {
-                            load: function(store,data,success) {
-                                this._showRenderedGrid(store);
-                                this._prepareLineByLineGrid(data);
-                            },
-                            scope: this
-                        }
-                    });
-                },
-                /* formats data for the revision history cell */
-                _revisionRenderer: function(value) {
-                    var formatted_value_array = [];
-                    if ( value.Revisions ) {
-                        Ext.Array.each( value.Revisions, function(rev){
-                                formatted_value_array.push( rev.RevisionNumber + " on " + rev.CreationDate + " by " + rev.User._refObjectName );
-                        });
-                    }
-                    return formatted_value_array.join("<br/>");
-                },
-                _showRenderedGrid: function(store) {
-                    if ( this.render_grid ) { this.render_grid.destroy(); }
-                    this.render_grid = Ext.create('Rally.ui.grid.Grid',{
-                        store: store,
-                        columnCfgs: [
-                            { text: 'ID', dataIndex: 'FormattedID' },
-                            { text: 'Name', dataIndex: 'Name' },
-                            { text: 'Revs', dataIndex: 'RevisionHistory', renderer: this._revisionRenderer, flex: 1}
-                        ]
-                    });
-                    this.down('#render_example').add(this.render_grid);
-                },
-                _prepareLineByLineGrid: function(data) {
-                    var lines = [];
-                    /* TODO: see if this is what a TransformStore might be good for? */
-                    Ext.Array.each(data,function(item) {
-                        Ext.Array.each(item.get('RevisionHistory').Revisions, function(rev){
-                            var line = {
-                                FormattedID: item.get('FormattedID'),
-                                Name: item.get('Name'),
-                                RevisionNumber: rev.RevisionNumber,
-                                RevisionDate: rev.CreationDate,
-                                RevisionAuthor: rev.User._refObjectName
-                            };
-                            lines.push(line);
-                        });
-                    });
-                    /* could be much more compact, but I like to separate the data gathering from the data display */
-                    Ext.create('Rally.data.custom.Store',{
-                        autoLoad: true,
-                        data: lines,
-                        listeners: {
-                            load: function(store,data,success) {
-                                this._showLineByLineGrid(store);
-                            },
-                            scope: this
-                        }
-                    });
-                },
-                _showLineByLineGrid: function(store) {
-                    if ( this.line_grid ) { this.line_grid.destroy(); }
-                    this.line_grid = Ext.create('Rally.ui.grid.Grid',{
-                        store: store,
-                        columnCfgs: [
-                            { text: 'ID', dataIndex: 'FormattedID' },
-                            { text: 'Name', dataIndex: 'Name' },
-                            { text: 'id', dataIndex: 'RevisionNumber'},
-                            { text: 'date', dataIndex: 'RevisionDate', flex: 1 },
-                            { text: 'author', dataIndex: 'RevisionAuthor' }
-                        ]
-                    });
-                    this.down('#line_by_line_example').add(this.line_grid);
-                }
-            });
+        Rally.onReady(function () {
+                Ext.define("CustomApp",{extend:"Rally.app.App",componentCls:"app",layout:{type:"hbox"},defaults:{padding:10},items:[{xtype:"container",itemId:"render_example",flex:1},{xtype:"container",itemId:"line_by_line_example",flex:1}],_storiesWithRevisionHistory:[],_storiesWithRevisions:[],launch:function(){this._getSomeStories()},_getSomeStories:function(){this.render_grid&&this.render_grid.destroy(),this.line_grid&&this.line_grid.destroy(),Ext.create("Rally.data.WsapiDataStore",{autoLoad:!0,model:"User Story",limit:20,fetch:["FormattedID","Name","CreationDate","User","RevisionHistory","Revisions"],listeners:{load:this._onStoriesLoaded,scope:this}})},_onStoriesLoaded:function(store,records,success){var me=this;me._storiesWithRevisionHistory=[],me._storiesWithRevisions=[];var historyPromises=[],revisionPromises=[];0===records.length?me._noArtifactsNotify():(Ext.Array.each(records,function(artifact){historyPromises.push(me._getRevisionHistory(artifact,me))}),Deft.Promise.all(historyPromises).then({success:function(results){Ext.Array.each(results,function(result){me._storiesWithRevisionHistory.push(result)}),Ext.Array.each(me._storiesWithRevisionHistory,function(story){revisionPromises.push(me._getRevisions(story,me))}),Deft.Promise.all(revisionPromises).then({success:function(results){Ext.Array.each(results,function(result){me._storiesWithRevisions.push(result)}),me._showRenderedGrid(),me._prepareLineByLineGrid()}})}}))},_getRevisionHistory:function(artifact,scope){var deferred=Ext.create("Deft.Deferred"),me=scope,artifactRef=artifact.get("_ref"),artifactObjectID=artifact.get("ObjectID"),artifactFormattedID=artifact.get("FormattedID"),artifactName=artifact.get("Name"),revisionModel=Rally.data.ModelFactory.getModel({type:"RevisionHistory",scope:this,success:function(model,operation){model.load(Rally.util.Ref.getOidFromRef(artifact.get("RevisionHistory")._ref),{scope:this,success:function(record,operation){result={_ref:artifactRef,ObjectID:artifactObjectID,FormattedID:artifactFormattedID,Name:artifactName,RevisionHistory:record},deferred.resolve(result)}})}});return deferred},_getRevisions:function(artifact,scope){var deferred=Ext.create("Deft.Deferred"),me=scope,revisions=[],resultHash={},revisionHistoryObject=artifact.RevisionHistory,artifactRevisions=revisionHistoryObject.getCollection("Revisions",{fetch:["RevisionNumber","CreationDate","User"]});return artifactRevisions.load({callback:function(records,operation,success){Ext.Array.each(records,function(revision){revisions.push(revision)}),result={_ref:artifact._ref,ObjectID:artifact.ObjectID,FormattedID:artifact.FormattedID,Name:artifact.Name,RevisionHistory:revisionHistoryObject,Revisions:revisions},deferred.resolve(result)}}),deferred},_revisionRenderer:function(revisions){var formatted_value_array=[];return Ext.Array.each(revisions,function(revision){var revNumber=revision.get("RevisionNumber"),revCreationDate=Rally.util.DateTime.toIsoString(new Date(revision.get("CreationDate")),!1),revUser=revision.get("User")._refObjectName;formatted_value_array.push(revNumber+" on "+revCreationDate+" by "+revUser)}),formatted_value_array.join("<br/>")},_showRenderedGrid:function(){var me=this;this.render_grid&&this.render_grid.destroy();var gridStore=Ext.create("Rally.data.custom.Store",{data:me._storiesWithRevisions,pageSize:20,remoteSort:!1});this.render_grid=Ext.create("Rally.ui.grid.Grid",{store:gridStore,columnCfgs:[{text:"ID",dataIndex:"FormattedID"},{text:"Name",dataIndex:"Name"},{text:"Revisions",dataIndex:"Revisions",renderer:this._revisionRenderer,flex:1}]}),this.down("#render_example").add(this.render_grid)},_prepareLineByLineGrid:function(){var me=this,lines=[];Ext.Array.each(me._storiesWithRevisions,function(item){var itemRevs=item.Revisions;Ext.Array.each(itemRevs,function(rev){var line={FormattedID:item.FormattedID,Name:item.Name,RevisionNumber:rev.get("RevisionNumber"),RevisionDate:rev.get("CreationDate"),RevisionAuthor:rev.get("User")._refObjectName};lines.push(line)})}),Ext.create("Rally.data.custom.Store",{autoLoad:!0,data:lines,listeners:{load:function(store,data,success){this._showLineByLineGrid(store)},scope:this}})},_showLineByLineGrid:function(store){this.line_grid&&this.line_grid.destroy(),this.line_grid=Ext.create("Rally.ui.grid.Grid",{store:store,columnCfgs:[{text:"ID",dataIndex:"FormattedID"},{text:"Name",dataIndex:"Name"},{text:"id",dataIndex:"RevisionNumber"},{text:"date",dataIndex:"RevisionDate",flex:1},{text:"author",dataIndex:"RevisionAuthor"}]}),this.down("#line_by_line_example").add(this.line_grid)}});
 
             Rally.launchApp('CustomApp', {
-                name: 'Revision History Examples'
+                name:"Revision History Examples",
+	            parentRepos:""
             });
+
         });
     </script>
 
+
     <style type="text/css">
         .app {
-             /* Add app styles here */
-        }
+     /* Add app styles here */
+}
+
     </style>
 </head>
 <body></body>

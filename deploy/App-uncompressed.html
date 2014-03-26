@@ -1,4 +1,13 @@
-Ext.define('CustomApp', {
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Revision History Examples</title>
+
+    <script type="text/javascript" src="https://rally1.rallydev.com/apps/2.0rc2/sdk.js"></script>
+
+    <script type="text/javascript">
+        Rally.onReady(function () {
+                Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
     layout: { type: 'hbox' },
@@ -220,3 +229,23 @@ Ext.define('CustomApp', {
         this.down('#line_by_line_example').add(this.line_grid);
     }
 });
+
+
+            Rally.launchApp('CustomApp', {
+                name:"Revision History Examples",
+	            parentRepos:""
+            });
+
+        });
+    </script>
+
+
+    <style type="text/css">
+        .app {
+     /* Add app styles here */
+}
+
+    </style>
+</head>
+<body></body>
+</html>
