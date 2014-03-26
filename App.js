@@ -185,7 +185,7 @@ Ext.define('CustomApp', {
                     FormattedID: item.FormattedID,
                     Name: item.Name,
                     RevisionNumber: rev.get('RevisionNumber'),
-                    RevisionDate: rev.get('CreationDate'),
+                    RevisionDate: Rally.util.DateTime.toIsoString(new Date(rev.get('CreationDate')), false),
                     RevisionAuthor: rev.get('User')._refObjectName
                 };
                 lines.push(line);
