@@ -5,8 +5,8 @@ Ext.define('CustomApp', {
     defaults: { padding: 10 },
 
     items: [
-        {xtype: 'container',itemId:'render_example', flex: 1},
-        {xtype: 'container',itemId:'line_by_line_example', flex: 1}
+        {xtype: 'container', itemId: 'render_example', flex: 1},
+        {xtype: 'container', itemId: 'line_by_line_example', flex: 1}
     ],
 
     _storiesWithRevisionHistory: [],
